@@ -2,52 +2,33 @@ require("dotenv").config();
 var sslRedirect = require("heroku-ssl-redirect");
 
 // Twillio config
-var twillioAuthToken =
+const twillioAuthToken =
 	process.env.HEROKU_AUTH_TOKEN || process.env.LOCAL_AUTH_TOKEN;
-var twillioAccountSID =
+const twillioAccountSID =
 	process.env.HEROKU_TWILLIO_SID || process.env.LOCAL_TWILLIO_SID;
-var twilio = require("twilio")(twillioAccountSID, twillioAuthToken);
-var express = require("express");
-var path = require("path");
+const twilio = require("twilio")(twillioAccountSID, twillioAuthToken);
+const express = require("express");
+const path = require("path");
 const app = express();
 
-// Live reload for development
-if (process.env.NODE_ENV === "development") {
-	const livereload = require("livereload");
-	const connectLivereload = require("connect-livereload");
-
-	// open livereload high port and start to watch public directory for changes
-	const liveReloadServer = livereload.createServer();
-	liveReloadServer.watch(path.join(__dirname, "public"));
-
-	// ping browser on Express boot, once browser has reconnected and handshaken
-	liveReloadServer.server.once("connection", () => {
-		setTimeout(() => {
-			liveReloadServer.refresh("/");
-		}, 100);
-	});
-
-	// monkey patch every served HTML so they know of changes
-	app.use(connectLivereload());
-}
-
-var http = require("http").createServer(app);
-var io = require("socket.io")(http);
+const http = require("http").createServer(app);
+const io = require("socket.io")(http);
 const chalk = require("chalk");
 
 app.use(sslRedirect());
 
 // BEGIN SOCKETIO COMMUNICATION FOR WEBRTC
 // When a socket connects, set up the specific listeners we will use.
-io.on("connection",  (socket: any) => {
+io.on("connection", (socket: any) => {
 	// When a client tries to join a room, only allow them if they are first or
 	// second in the room. Otherwise it is full.
-	socket.on("join",  (room: string, acknowledgement: Function) => {
+	socket.on("join", (room: string, acknowledgement: Function) => {
 		console.log("Client joining: ", room);
 		acknowledgement();
 
 		var clients = io.sockets.adapter.rooms[room];
-		var numClients: number = typeof clients !== "undefined" ? clients.length : 0;
+		var numClients: number =
+			typeof clients !== "undefined" ? clients.length : 0;
 		if (numClients === 0) {
 			socket.join(room);
 		} else if (numClients < 15) {
@@ -66,10 +47,6 @@ io.on("connection",  (socket: any) => {
 		}
 	});
 
-	socket.on("test", () => {
-		console.log("test");
-	});
-
 	// Client is disconnecting from the server
 	socket.on("disconnecting", () => {
 		var room = Object.keys(socket.rooms).filter(item => item != socket.id); // Socket joins a room of itself, remove that
@@ -81,7 +58,7 @@ io.on("connection",  (socket: any) => {
 	// token to get ephemeral credentials to use the TURN server.
 	socket.on("token", (room: string, uuid: string) => {
 		console.log("Received token request to:", room);
-		twilio.tokens.create( (err: string, response: string)=> {
+		twilio.tokens.create((err: string, response: string) => {
 			if (err) {
 				console.log(err, "for", room);
 			} else {
@@ -94,13 +71,13 @@ io.on("connection",  (socket: any) => {
 	});
 
 	// Relay candidate messages
-	socket.on("candidate",  (candidate: string, room:string, uuid: string)=> {
+	socket.on("candidate", (candidate: string, room: string, uuid: string) => {
 		console.log("Received candidate. Broadcasting...", room);
 		io.to(uuid).emit("candidate", candidate, socket.id);
 	});
 
 	// Relay offers
-	socket.on("offer",  (offer: string, room: string, uuid: string) =>{
+	socket.on("offer", (offer: string, room: string, uuid: string) => {
 		console.log(
 			"Offer from " + socket.id + "... emitting to " + uuid + "in room: ",
 			room
@@ -118,7 +95,7 @@ io.on("connection",  (socket: any) => {
 	});
 });
 
-var port = process.env.PORT || 3001;
+const port = process.env.PORT || 3001;
 http.listen(port, () => {
 	if (process.env.NODE_ENV === "development") {
 		console.warn(chalk`📙: When running in development mode, connections to the server will not be over HTTPS. 
