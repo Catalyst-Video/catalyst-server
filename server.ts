@@ -2,11 +2,11 @@ require("dotenv").config();
 var sslRedirect = require("heroku-ssl-redirect");
 
 // Twillio config
-const twillioAuthToken =
+const twilioAuthToken =
 	process.env.HEROKU_AUTH_TOKEN || process.env.LOCAL_AUTH_TOKEN;
-const twillioAccountSID =
+const twilioAccountSID =
 	process.env.HEROKU_TWILLIO_SID || process.env.LOCAL_TWILLIO_SID;
-const twilio = require("twilio")(twillioAccountSID, twillioAuthToken);
+const twilio = require("twilio")(twilioAccountSID, twilioAuthToken);
 const express = require("express");
 const path = require("path");
 const app = express();
@@ -17,11 +17,9 @@ const chalk = require("chalk");
 
 app.use(sslRedirect());
 
-// BEGIN SOCKETIO COMMUNICATION FOR WEBRTC
-// When a socket connects, set up the specific listeners we will use.
+// BEGIN SOCKET-IO COMMUNICATION FOR WEBRTC: When a socket connects, set up the specific listeners we will use
 io.on("connection", (socket: any) => {
-	// When a client tries to join a room, only allow them if they are first or
-	// second in the room. Otherwise it is full.
+	// When a client tries to join a room, only allow them if they are first or second in the room. Otherwise it is full.
 	socket.on("join", (room: string, acknowledgement: Function) => {
 		console.log("Client joining: ", room);
 		acknowledgement();
@@ -54,8 +52,7 @@ io.on("connection", (socket: any) => {
 		socket.broadcast.to(room).emit("leave", socket.id);
 	});
 
-	// When receiving the token message, use the Twilio REST API to request an
-	// token to get ephemeral credentials to use the TURN server.
+	// When receiving the token message, use the Twilio REST API to request an token to get ephemeral credentials to use the TURN server.
 	socket.on("token", (room: string, uuid: string) => {
 		console.log("Received token request to:", room);
 		twilio.tokens.create((err: string, response: string) => {
